@@ -1,8 +1,18 @@
 package com.aurviz.aiagent.ui.navigation
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,6 +30,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,8 +41,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +54,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.aurviz.aiagent.AurvizApp
+import com.aurviz.aiagent.R
+import com.aurviz.aiagent.ui.theme.AurvizGold
 import com.aurviz.aiagent.data.local.memory.MemoryCategory
 import com.aurviz.aiagent.ui.components.FullScreenOnboarding
 import com.aurviz.aiagent.ui.screens.chat.AgentChatScreen
@@ -66,7 +81,64 @@ fun AppNavigation() {
     val memoryRepo = app.memoryRepository
     val coroutineScope = rememberCoroutineScope()
 
+    var showSplash by remember { mutableStateOf(true) }
     var showOnboarding by remember { mutableStateOf(!prefs.hasCompletedOnboarding) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1600)
+        showSplash = false
+    }
+
+    if (showSplash) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0B0F19))
+                .clickable { showSplash = false },
+            contentAlignment = Alignment.Center
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "SplashPulse")
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 0.95f,
+                targetValue = 1.05f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(900),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "LogoScale"
+            )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.aurviz_mark_transparent),
+                    contentDescription = "Aurviz Logo",
+                    modifier = Modifier
+                        .size(92.dp)
+                        .scale(scale)
+                )
+
+                Text(
+                    text = "AURVIZ AGENT",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    letterSpacing = 3.sp
+                )
+
+                Text(
+                    text = "PERSONAL AI AGENT • READY",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AurvizGold,
+                    letterSpacing = 1.5.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        return
+    }
 
     val navController = rememberNavController()
     val items = listOf(
@@ -111,16 +183,7 @@ fun AppNavigation() {
 
             NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp,
-                modifier = Modifier.drawBehind {
-                    // Sleek 1dp top border divider line
-                    drawLine(
-                        color = outlineColor,
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width, 0f),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                }
+                tonalElevation = 0.dp
             ) {
                 items.forEach { screen ->
                     val isSelected = currentRoute == screen.route

@@ -384,25 +384,36 @@ class MultiStepPlanner(
 
     private fun isAppOpenIntent(lower: String): Boolean {
         val appKeywords = listOf(
-            "whatsapp", "instagram", "facebook", "youtube", "chrome", "browser",
-            "camera", "settings", "gallery", "photos", "twitter", "telegram"
+            "whatsapp", "instagram", "insta", "facebook", "fb", "youtube", "yt", "chrome", "browser",
+            "camera", "settings", "gallery", "photos", "twitter", "telegram",
+            "zomato", "swiggy", "netflix", "spotify", "uber", "ola", "flipkart", "amazon", "paytm", "phonepe", "gpay", "gmail", "clock", "maps", "calculator"
         )
         val hasOpenVerb = lower.startsWith("open ") || lower.startsWith("launch ") ||
                 lower.contains(" open karo") || lower.contains(" open krdo") ||
                 lower.contains(" open kar") || lower.contains(" kholo") ||
-                lower.contains(" start ")
+                lower.contains(" chalao") || lower.contains(" start ")
         val hasApp = appKeywords.any { lower.contains(it) }
         val isWebOrEmail = lower.contains("website") || lower.contains(".com") || lower.contains(".net") ||
                 lower.contains(".org") || lower.contains(".app") || lower.contains("email") || lower.contains("mail")
-        return hasOpenVerb && hasApp && !isWebOrEmail
+        return (hasOpenVerb && hasApp && !isWebOrEmail) ||
+                (hasOpenVerb && !isWebOrEmail && lower.split(" ").size <= 4)
     }
 
     private fun extractAppName(lower: String): String {
-        val apps = listOf("whatsapp", "instagram", "facebook", "youtube", "camera", "settings", "gallery", "photos", "chrome", "browser", "twitter", "telegram")
+        val apps = listOf(
+            "zomato", "swiggy", "instagram", "insta", "whatsapp", "youtube", "yt",
+            "facebook", "fb", "camera", "settings", "gallery", "photos", "chrome",
+            "browser", "twitter", "telegram", "spotify", "netflix", "uber", "ola",
+            "flipkart", "amazon", "paytm", "phonepe", "gpay", "gmail", "clock", "maps", "calculator"
+        )
         for (a in apps) {
             if (lower.contains(a)) return a
         }
-        return "whatsapp"
+        val clean = lower
+            .replace(Regex("^(open|launch|start|kholo)\\s+", RegexOption.IGNORE_CASE), "")
+            .replace(Regex("\\s+(open karo|open krdo|open kar|kholo|chalao|app)$", RegexOption.IGNORE_CASE), "")
+            .trim()
+        return if (clean.isNotBlank()) clean.split(" ").first() else "whatsapp"
     }
 
     private fun isCameraIntent(lower: String): Boolean {
@@ -479,19 +490,37 @@ class MultiStepPlanner(
 
     private fun extractContactName(text: String, memoryContext: String): String {
         val lower = text.lowercase()
-        // Check for patterns like "papa name se jo contact save hai" or "contact named papa" or "papa ko"
+
+        // Check for self message ("khud ko", "apne aap ko", "myself")
+        if (lower.contains("khud ko") || lower.contains("apne aap ko") || lower.contains("to myself") || lower.contains("send myself")) {
+            return "khud"
+        }
+
+        // Multi-word exact matches
+        if (lower.contains("papa ji jio") || lower.contains("papaji jio")) return "Papa Ji Jio"
+        if (lower.contains("papa ji") || lower.contains("papaji")) return "Papa Ji"
+
+        // Check for patterns like "papa name se jo contact save hai" or "contact named papa"
         val nameSeMatch = Regex("([a-zA-Z]+)\\s+name\\s+se\\s+(?:jo\\s+)?contact", RegexOption.IGNORE_CASE).find(text)
-        if (nameSeMatch != null) return nameSeMatch.groupValues[1].replaceFirstChar { it.uppercase() }
+        if (nameSeMatch != null) return nameSeMatch.groupValues[1].trim().replaceFirstChar { it.uppercase() }
 
         val namedMatch = Regex("(?:contact\\s+named|contact\\s+name)\\s+([a-zA-Z]+)", RegexOption.IGNORE_CASE).find(text)
-        if (namedMatch != null) return namedMatch.groupValues[1].replaceFirstChar { it.uppercase() }
+        if (namedMatch != null) return namedMatch.groupValues[1].trim().replaceFirstChar { it.uppercase() }
 
-        val koMatch = Regex("([a-zA-Z]+)\\s+ko\\s+(?:whatsapp|msg|call|phone|message)", RegexOption.IGNORE_CASE).find(text)
-        if (koMatch != null) return koMatch.groupValues[1].replaceFirstChar { it.uppercase() }
+        val koMatch = Regex("(?:whatsapp\\s+par\\s+)?([a-zA-Z\\s]+?)\\s+ko\\s+(?:whatsapp|msg|call|phone|message|bhejo|bolo)", RegexOption.IGNORE_CASE).find(text)
+        if (koMatch != null) {
+            val candidate = koMatch.groupValues[1].replace(Regex("^(?:whatsapp\\s+par|whatsapp|par)\\s*", RegexOption.IGNORE_CASE), "").trim()
+            if (candidate.isNotBlank() && candidate.length > 1) {
+                return candidate.split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+            }
+        }
 
-        val toContactMatch = Regex("(?:to|send to)\\s+([a-zA-Z]+)(?:\\s+on\\s+whatsapp|\\s+via\\s+whatsapp)?", RegexOption.IGNORE_CASE).find(text)
+        val toContactMatch = Regex("(?:to|send to)\\s+([a-zA-Z\\s]+?)(?:\\s+on\\s+whatsapp|\\s+via\\s+whatsapp|$)", RegexOption.IGNORE_CASE).find(text)
         if (toContactMatch != null && !toContactMatch.groupValues[1].equals("whatsapp", ignoreCase = true)) {
-            return toContactMatch.groupValues[1].replaceFirstChar { it.uppercase() }
+            val candidate = toContactMatch.groupValues[1].trim()
+            if (candidate.isNotBlank() && candidate.length > 1) {
+                return candidate.split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+            }
         }
 
         return when {
@@ -699,6 +728,22 @@ class MultiStepPlanner(
                     appendLine("Aurviz User Account")
                 }
             }
+            topicLower.contains("extension") || topicLower.contains("exam") || topicLower.contains("mid sem") || topicLower.contains("syllabus") -> {
+                subject = "Request for 2-Day Extension on Mid-Semester Examination Schedule"
+                body = buildString {
+                    appendLine("Respected Examination Committee / Faculty Coordinator,")
+                    appendLine()
+                    appendLine("I am writing to formally request a 2-day extension for the upcoming Mid-Semester Examination schedule. Due to the extensive syllabus coverage and in-depth coursework across technical modules, additional preparation time will ensure that we can adequately revise and perform to our highest academic potential.")
+                    appendLine()
+                    appendLine("I would be sincerely grateful if you could kindly consider this extension request.")
+                    appendLine()
+                    appendLine("Thank you for your understanding and favorable consideration.")
+                    appendLine()
+                    appendLine("Sincerely,")
+                    appendLine(userName)
+                    appendLine("Student, Computer Science & Engineering")
+                }
+            }
             topicLower.contains("project") || topicLower.contains("assessment") || topicLower.contains("sde") || topicLower.contains("deliverable") -> {
                 subject = "Aurviz SDE Hiring Assignment: Comprehensive Architecture & Deliverables Update"
                 body = buildString {
@@ -740,22 +785,19 @@ class MultiStepPlanner(
             }
             else -> {
                 val titleTopic = cleanTopic.split(" ").joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
-                subject = "Detailed Update: $titleTopic"
+                subject = "Update: $titleTopic"
                 body = buildString {
                     appendLine("Hi $recipientName,")
                     appendLine()
-                    appendLine("I am writing to share a detailed update regarding $cleanTopic.")
+                    appendLine("I hope this message finds you well.")
                     appendLine()
-                    appendLine("Summary of Key Points:")
-                    appendLine("• Initial analysis and action items for $cleanTopic have been systematically reviewed.")
-                    appendLine("• Ongoing progress is on schedule with all associated requirements validated.")
-                    appendLine("• Further updates and next steps will be communicated as upcoming milestones are reached.")
+                    appendLine("I am writing regarding $cleanTopic. Please review the details at your earliest convenience and let me know if you need any additional clarification or action items from my side.")
                     appendLine()
-                    appendLine("Please feel free to reach out if you have any questions or require additional details.")
+                    appendLine("Looking forward to your thoughts.")
                     appendLine()
                     appendLine("Best regards,")
                     appendLine(userName)
-                    appendLine("Aurviz Personal AI Agent")
+                    appendLine("Aurviz Agent")
                 }
             }
         }

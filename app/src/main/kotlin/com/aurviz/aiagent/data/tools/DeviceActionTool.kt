@@ -153,41 +153,55 @@ class DeviceActionTool(
         val cleanNumber = rawNumber.replace(Regex("[^0-9]"), "")
 
         return try {
-            val intent = if (cleanNumber.isNotBlank()) {
-                // Direct WhatsApp message to specific number (instantly opens their chat window)
-                val formattedNumber = if (cleanNumber.length == 10) "91$cleanNumber" else cleanNumber
-                val url = "https://api.whatsapp.com/send?phone=$formattedNumber&text=${URLEncoder.encode(message, "UTF-8")}"
-                Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                    setPackage("com.whatsapp")
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            // If cleanNumber has 10 to 12 digits, attempt direct chat window
+            var directChatLaunched = false
+            if (cleanNumber.length in 10..12) {
+                val formattedNumber = when {
+                    cleanNumber.length == 10 -> "91$cleanNumber"
+                    cleanNumber.length == 11 && cleanNumber.startsWith("0") -> "91${cleanNumber.substring(1)}"
+                    cleanNumber.length == 12 && cleanNumber.startsWith("91") -> cleanNumber
+                    else -> cleanNumber
                 }
-            } else {
-                // Generic WhatsApp share
-                Intent(Intent.ACTION_SEND).apply {
+                try {
+                    val url = "https://api.whatsapp.com/send?phone=$formattedNumber&text=${URLEncoder.encode(message, "UTF-8")}"
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                        setPackage("com.whatsapp")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    directChatLaunched = true
+                } catch (e: Exception) {
+                    Log.w(TAG, "Direct WhatsApp URL failed, falling back to share intent: ${e.message}")
+                }
+            }
+
+            // Fallback: If contact not directly resolved or direct link failed, open WhatsApp with text pre-filled
+            // The user can tap ANY contact (e.g. Papa Ji Jio) and the message is ALREADY typed in the input box!
+            if (!directChatLaunched) {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_TEXT, message)
                     setPackage("com.whatsapp")
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-            }
-
-            try {
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                // If package com.whatsapp is not found, launch normal text share
-                val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, message)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    context.startActivity(shareIntent)
+                } catch (e2: Exception) {
+                    val genericIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, message)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(genericIntent)
                 }
-                context.startActivity(fallbackIntent)
             }
 
-            val summary = if (cleanNumber.isNotBlank()) {
-                val targetDesc = if (contactName.isNotBlank()) "$contactName ($cleanNumber)" else cleanNumber
-                "WhatsApp chat opened directly for $targetDesc with message:\n\"$message\""
+            val summary = if (cleanNumber.isNotBlank() && contactName.isNotBlank()) {
+                "WhatsApp opened for $contactName with message:\n\"$message\""
+            } else if (contactName.isNotBlank()) {
+                "WhatsApp opened with message ready for $contactName:\n\"$message\""
             } else {
-                "WhatsApp opened with message:\n\"$message\""
+                "WhatsApp opened with message pre-filled:\n\"$message\""
             }
 
             ToolExecutionResult.Success(
@@ -208,21 +222,57 @@ class DeviceActionTool(
 
     private fun resolveContactPhoneNumber(contactName: String): String? {
         if (contactName.isBlank()) return null
+        val lowerTarget = contactName.lowercase().trim()
+
+        // Handle self messaging ("khud", "myself", "me", "apne aap")
+        if (lowerTarget in listOf("khud", "myself", "self", "me", "apne aap", "apne", "my own", "mera number")) {
+            val userPhone = securePreferences.userPhoneNumber.trim()
+            if (userPhone.isNotBlank()) {
+                return userPhone.replace(Regex("[^0-9+]"), "")
+            }
+        }
+
         return try {
             val uri = android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI
             val projection = arrayOf(
                 android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER,
                 android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
             )
-            val selection = "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?"
-            val selectionArgs = arrayOf("%$contactName%")
-            context.contentResolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val numIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
-                    if (numIdx >= 0) {
-                        val raw = cursor.getString(numIdx) ?: ""
-                        return raw.replace(Regex("[^0-9]"), "")
+
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val numIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val nameIdx = cursor.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+
+                var bestNumber: String? = null
+                var bestScore = 0
+
+                // Split tokens e.g. "papa ji jio" -> ["papa", "ji", "jio"]
+                val targetTokens = lowerTarget.split(" ", "_", "-").filter { it.length > 1 }
+
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIdx)?.lowercase() ?: continue
+                    val num = cursor.getString(numIdx) ?: continue
+
+                    // Exact match
+                    if (name == lowerTarget) {
+                        return num.replace(Regex("[^0-9+]"), "")
                     }
+
+                    // Count token overlap
+                    var score = 0
+                    for (token in targetTokens) {
+                        if (name.contains(token)) score += 2
+                    }
+                    if (name.contains(lowerTarget)) score += 5
+
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestNumber = num.replace(Regex("[^0-9+]"), "")
+                    }
+                }
+
+                if (bestScore > 0) {
+                    return bestNumber
                 }
             }
             null
@@ -261,25 +311,12 @@ class DeviceActionTool(
 
     private fun executeOpenApp(args: Map<String, Any?>): ToolExecutionResult {
         val appName = args["app_name"]?.toString()?.lowercase()?.trim() ?: "whatsapp"
-        val packageMap = mapOf(
-            "whatsapp" to "com.whatsapp",
-            "instagram" to "com.instagram.android",
-            "youtube" to "com.google.android.youtube",
-            "facebook" to "com.facebook.katana",
-            "chrome" to "com.android.chrome",
-            "browser" to "com.android.chrome",
-            "twitter" to "com.twitter.android",
-            "x" to "com.twitter.android",
-            "telegram" to "org.telegram.messenger",
-            "camera" to "camera",
-            "settings" to "settings"
-        )
 
-        if (appName == "camera") {
+        if (appName in listOf("camera", "cam")) {
             return executeOpenCamera()
         }
 
-        if (appName == "settings") {
+        if (appName in listOf("settings", "setting", "system settings")) {
             return try {
                 val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -294,31 +331,82 @@ class DeviceActionTool(
             }
         }
 
-        val targetPkg = packageMap[appName] ?: appName
+        val packageMap = mapOf(
+            "zomato" to "com.application.zomato",
+            "swiggy" to "in.swiggy.android",
+            "instagram" to "com.instagram.android",
+            "insta" to "com.instagram.android",
+            "whatsapp" to "com.whatsapp",
+            "youtube" to "com.google.android.youtube",
+            "yt" to "com.google.android.youtube",
+            "facebook" to "com.facebook.katana",
+            "fb" to "com.facebook.katana",
+            "chrome" to "com.android.chrome",
+            "browser" to "com.android.chrome",
+            "twitter" to "com.twitter.android",
+            "x" to "com.twitter.android",
+            "telegram" to "org.telegram.messenger",
+            "spotify" to "com.spotify.music",
+            "netflix" to "com.netflix.mediaclient",
+            "uber" to "com.ubercab",
+            "ola" to "com.olacabs.customer"
+        )
 
-        return try {
+        val targetPkg = packageMap[appName]
+
+        // 1. Try launching through known package map
+        if (targetPkg != null) {
             val launchIntent = context.packageManager.getLaunchIntentForPackage(targetPkg)
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(launchIntent)
-                ToolExecutionResult.Success(
+                return ToolExecutionResult.Success(
                     outputSummary = "Opened ${appName.replaceFirstChar { it.uppercase() }} application successfully.",
                     structuredData = mapOf("action" to "open_app", "packageName" to targetPkg)
                 )
-            } else {
-                val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$targetPkg")).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                try {
-                    context.startActivity(marketIntent)
-                    ToolExecutionResult.Success(
-                        outputSummary = "Application '$appName' not found locally; opened Play Store.",
-                        structuredData = mapOf("action" to "open_app", "packageName" to targetPkg)
+            }
+        }
+
+        // 2. Dynamic discovery across all installed launcher applications
+        try {
+            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+            val apps = context.packageManager.queryIntentActivities(mainIntent, 0)
+            val matchedApp = apps.firstOrNull { resolveInfo ->
+                val label = resolveInfo.loadLabel(context.packageManager).toString().lowercase()
+                val pkg = resolveInfo.activityInfo.packageName.lowercase()
+                label.contains(appName) || pkg.contains(appName)
+            }
+
+            if (matchedApp != null) {
+                val matchedPkg = matchedApp.activityInfo.packageName
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(matchedPkg)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(launchIntent)
+                    val label = matchedApp.loadLabel(context.packageManager).toString()
+                    return ToolExecutionResult.Success(
+                        outputSummary = "Opened $label application successfully.",
+                        structuredData = mapOf("action" to "open_app", "packageName" to matchedPkg)
                     )
-                } catch (e2: Exception) {
-                    ToolExecutionResult.Failure("Application '$appName' ($targetPkg) is not installed on this device.")
                 }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Dynamic app search failed: ${e.message}")
+        }
+
+        // 3. Fallback to Google Play Store
+        val fallbackPkg = targetPkg ?: appName
+        return try {
+            val marketIntent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$fallbackPkg")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(marketIntent)
+            ToolExecutionResult.Success(
+                outputSummary = "Application '$appName' not found locally; opened Play Store.",
+                structuredData = mapOf("action" to "open_app", "packageName" to fallbackPkg)
+            )
         } catch (e: Exception) {
             ToolExecutionResult.Failure("Could not launch $appName: ${e.message}")
         }

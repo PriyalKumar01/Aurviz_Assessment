@@ -83,16 +83,6 @@ fun ScheduledTasksScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onNavigateHome) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Go to Home",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -101,12 +91,15 @@ fun ScheduledTasksScreen(
                         Icon(
                             Icons.Default.Alarm,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
                         )
                         Text(
                             "Scheduled Tasks & Workflows",
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 },

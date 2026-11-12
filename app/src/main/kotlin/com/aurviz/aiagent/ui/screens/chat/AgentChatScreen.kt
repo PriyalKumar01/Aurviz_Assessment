@@ -147,6 +147,7 @@ fun AgentChatScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -166,13 +167,15 @@ fun AgentChatScreen(
                                 .clip(RoundedCornerShape(8.dp))
                         )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy((-2).dp)) {
                             Text(
                                 text = "Aurviz Agent",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    lineHeight = 16.sp,
+                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                                ),
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 18.sp
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -201,6 +204,10 @@ fun AgentChatScreen(
                                         else -> "Personal AI Agent • Ready"
                                     },
                                     fontSize = 11.sp,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        lineHeight = 11.sp,
+                                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -274,7 +281,7 @@ fun AgentChatScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .imePadding()
                 .background(MaterialTheme.colorScheme.background)
         ) {
@@ -409,7 +416,7 @@ fun AgentChatScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .padding(start = 10.dp, end = 10.dp, top = 2.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(

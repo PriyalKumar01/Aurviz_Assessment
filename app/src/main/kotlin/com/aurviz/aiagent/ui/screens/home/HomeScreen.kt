@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aurviz.aiagent.AurvizApp
 import com.aurviz.aiagent.R
 import com.aurviz.aiagent.ui.theme.AurvizBlueViolet
+import com.aurviz.aiagent.ui.theme.AurvizDarkButton
 import com.aurviz.aiagent.ui.theme.AurvizSuccess
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -115,13 +116,15 @@ fun HomeScreen(
                                 .clip(RoundedCornerShape(8.dp))
                         )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy((-2).dp)) {
                             Text(
                                 text = "Aurviz Agent",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    lineHeight = 16.sp,
+                                    platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                                ),
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 18.sp
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -136,6 +139,10 @@ fun HomeScreen(
                                 Text(
                                     text = "Personal AI Agent • Ready",
                                     fontSize = 11.sp,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        lineHeight = 11.sp,
+                                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+                                    ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -227,12 +234,17 @@ fun HomeScreen(
 
                     Button(
                         onClick = { onNavigateToChat(null) },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AurvizDarkButton,
+                            contentColor = Color.White
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Chat with Aurviz Agent", fontWeight = FontWeight.Bold)
+                        Text("Chat with Aurviz Agent", fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

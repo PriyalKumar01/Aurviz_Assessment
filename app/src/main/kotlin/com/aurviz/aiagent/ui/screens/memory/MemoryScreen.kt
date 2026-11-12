@@ -91,16 +91,6 @@ fun MemoryScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onNavigateHome) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Go to Home",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -109,12 +99,14 @@ fun MemoryScreen(
                         Icon(
                             Icons.Default.Psychology,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
                         )
                         Text(
                             "Personal Memory Layer",
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 },

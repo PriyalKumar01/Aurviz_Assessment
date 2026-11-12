@@ -206,12 +206,36 @@ class MultiStepPlannerTest {
     }
 
     @Test
-    fun `test web automation for college study natural query`() {
-        val prompt = "college study website open krdo"
+    fun `test app opening intent for zomato and general apps`() {
+        val prompt = "open zomato"
         val plan = planner.createPlanForPrompt(prompt, "")
 
         assertEquals(1, plan.steps.size)
-        assertEquals("web_automation", plan.steps[0].toolName)
-        assertEquals("https://college-study.netlify.app", plan.steps[0].args["url"])
+        assertEquals("device_actions", plan.steps[0].toolName)
+        assertEquals("open_app", plan.steps[0].args["action"])
+        assertEquals("zomato", plan.steps[0].args["app_name"])
+    }
+
+    @Test
+    fun `test whatsapp multi-word contact extraction for papa ji jio`() {
+        val prompt = "whatsapp par papa ji jio ko msg bhejo hello"
+        val plan = planner.createPlanForPrompt(prompt, "")
+
+        assertEquals(1, plan.steps.size)
+        assertEquals("device_actions", plan.steps[0].toolName)
+        assertEquals("send_whatsapp", plan.steps[0].args["action"])
+        assertEquals("Papa Ji Jio", plan.steps[0].args["contact_name"])
+    }
+
+    @Test
+    fun `test academic exam extension email synthesis`() {
+        val prompt = "send email to 230104043@hbtu.ac.in on 2 day extension in mid sem examination bcz of large syllabus"
+        val plan = planner.createPlanForPrompt(prompt, "")
+
+        assertEquals(1, plan.steps.size)
+        assertEquals("send_email", plan.steps[0].toolName)
+        val body = plan.steps[0].args["body"].toString()
+        assertTrue(body.contains("Mid-Semester Examination", ignoreCase = true))
+        assertTrue(body.contains("syllabus", ignoreCase = true))
     }
 }

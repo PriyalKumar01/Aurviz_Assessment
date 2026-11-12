@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Launch
 import androidx.compose.material.icons.filled.Memory
@@ -122,6 +123,7 @@ fun SettingsScreen(
 
     // Dialog state for revoking permissions
     var permissionToRevoke by remember { mutableStateOf<PermissionItem?>(null) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     // Runtime Permission Request Launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -137,16 +139,6 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onNavigateHome) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = "Go to Home",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -161,18 +153,16 @@ fun SettingsScreen(
                         Text(
                             "Settings & Preferences",
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        viewModel.refreshPerformanceMetrics()
-                        viewModel.refreshPermissions()
-                    }) {
+                    IconButton(onClick = { showAboutDialog = true }) {
                         Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh Metrics",
+                            Icons.Default.Info,
+                            contentDescription = "About Developer",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -856,6 +846,115 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        // About Developer Info Dialog
+        if (showAboutDialog) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showAboutDialog = false },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            "About Aurviz AI Agent",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                },
+                text = {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Aurviz Personal AI Agent",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Production Release • Version 1.0.0",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        androidx.compose.material3.HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            text = "Developer:",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Priyal Kumar",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.linkedin.com/in/priyal-kumar-29b26529a/")).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
+                        )
+                        Text(
+                            text = "Computer Science & Engineering\nHarcourt Butler Technical University (HBTU Kanpur)",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable {
+                                    try {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.linkedin.com/in/priyal-kumar-29b26529a/")).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {}
+                                }
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Launch,
+                                contentDescription = "LinkedIn",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                "linkedin.com/in/priyal-kumar-29b26529a",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { showAboutDialog = false }) {
+                        Text("Close", fontWeight = FontWeight.Bold)
+                    }
+                }
+            )
         }
     }
 }

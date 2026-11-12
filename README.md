@@ -73,38 +73,39 @@ The project follows Clean Architecture, Separation of Concerns, and the MVVM + M
 
 ```mermaid
 graph TD
-    subgraph UI ["Presentation Layer (Jetpack Compose Material 3)"]
-        ChatScreen["AgentChatScreen<br/>(Voice Waveform, Messages, Status)"]
-        MemoryScreen["MemoryScreen<br/>(CRUD, Search, Category Chips)"]
-        ScheduledScreen["ScheduledTasksScreen<br/>(Jobs, Switch, Execution Logs)"]
-        SettingsScreen["SettingsScreen<br/>(Keystore API Key, Latency & Heap Telemetry)"]
-        WebSheet["WebAutomationSheet<br/>(Controlled Browser live DOM viewer)"]
-        ConfirmCard["ActionConfirmationCard<br/>(Sensitive Action Gate)"]
+    subgraph UI [Presentation Layer - Jetpack Compose]
+        ChatScreen["AgentChatScreen: Voice Waveform, Messages, Status"]
+        MemoryScreen["MemoryScreen: CRUD, Search, Category Chips"]
+        ScheduledScreen["ScheduledTasksScreen: Routines, Switch, Execution Logs"]
+        SettingsScreen["SettingsScreen: Encrypted Keystore, Metrics & Developer Info"]
+        WebSheet["WebAutomationSheet: Controlled Browser DOM Viewer"]
+        ConfirmCard["ActionConfirmationCard: Sensitive Action Gate"]
     end
 
-    subgraph Domain ["Domain Layer (Agent Intelligence & Planning)"]
-        Orchestrator["AgentOrchestrator<br/>(Coordinates Cognitive Loop)"]
-        Planner["MultiStepPlanner<br/>(Decomposes Complex Compound Goals)"]
-        VoiceMgr["VoiceManager<br/>(SpeechRecognizer, RMS dB, TTS)"]
+    subgraph Domain [Domain Layer - Agent Intelligence]
+        Orchestrator["AgentOrchestrator: Cognitive Loop Coordinator"]
+        Planner["MultiStepPlanner: Compound Goal Decomposer"]
+        VoiceMgr["VoiceManager: SpeechRecognizer, RMS dB, TTS Engine"]
     end
 
-    subgraph Tools ["Tools Layer (Action Capabilities)"]
+    subgraph Tools [Tools Layer - Capabilities]
         ToolRegistry["ToolRegistry"]
-        EmailTool["EmailTool<br/>(Confirm Gate, Intent/Account)"]
-        WebTool["WebAutomationTool<br/>(DOM Extraction, Scroll)"]
-        SchedulerTool["SchedulerTool<br/>(Cron Parser, Jobs)"]
-        MemoryTool["MemoryTool<br/>(Explicit Save/Retrieve)"]
+        EmailTool["EmailTool: Confirm Gate, Intent & Account"]
+        WebTool["WebAutomationTool: DOM Extraction & Scroll"]
+        SchedulerTool["SchedulerTool: Cron Parser & Jobs"]
+        MemoryTool["MemoryTool: Explicit Save & Retrieve"]
+        DeviceTool["DeviceActionTool: App Launcher, WhatsApp & Dialer"]
     end
 
-    subgraph Data ["Data Layer & Background Execution"]
-        GeminiClient["GeminiApiClient<br/>(Function Calling REST)"]
-        MemoryRepo["MemoryRepository<br/>(Relevance Scoring Engine)"]
-        TaskRepo["ScheduledTasksRepository<br/>(Execution Logs & Time Rules)"]
-        AppDB[("AppDatabase<br/>(SQLite Thread-Safe Store)")]
-        WorkMgr["AgentWorkManager<br/>(WorkManager + AlarmManager)"]
-        Worker["ScheduledTaskWorker<br/>(Background Execution Worker)"]
-        Boot["BootReceiver<br/>(Restores on BOOT_COMPLETED)"]
-        SecurePref["SecurePreferences<br/>(AES256 EncryptedSharedPreferences)"]
+    subgraph Data [Data Layer - Persistence & Background]
+        GeminiClient["GeminiApiClient: Function Calling REST Client"]
+        MemoryRepo["MemoryRepository: Relevance Scoring Engine"]
+        TaskRepo["ScheduledTasksRepository: Logs & Schedules"]
+        AppDB["AppDatabase: SQLite Thread-Safe Store"]
+        WorkMgr["AgentWorkManager: WorkManager & AlarmManager"]
+        Worker["ScheduledTaskWorker: Background Execution Worker"]
+        Boot["BootReceiver: Restores on Device Restart"]
+        SecurePref["SecurePreferences: AES-256 Keystore Storage"]
     end
 
     ChatScreen --> Orchestrator
@@ -121,6 +122,7 @@ graph TD
     ToolRegistry --> WebTool
     ToolRegistry --> SchedulerTool
     ToolRegistry --> MemoryTool
+    ToolRegistry --> DeviceTool
 
     EmailTool -.-> ConfirmCard
     WebTool -.-> WebSheet
@@ -206,7 +208,7 @@ Stored in SQLite via `AppDatabase`:
 
 ### Relevance Retrieval Algorithm
 When a prompt arrives (e.g., *"Send email to Alice about the sprint"*), the engine computes a weighted relevance score $S$ for each stored memory:
-$$S = S_{\text{importance}} + S_{\text{key\_match}} + S_{\text{token\_overlap}} + S_{\text{category\_boost}} + S_{\text{recency}}$$
+$$S = S_{\text{importance}} + S_{\text{key-match}} + S_{\text{token-overlap}} + S_{\text{category-boost}} + S_{\text{recency}}$$
 - **Key Match**: Direct topic/keyword match adds $+10.0$.
 - **Token Overlap**: Tokenized word matches add $+3.0$ per overlapping token.
 - **Category Boost**: Prompts mentioning *"email"* boost `CONTACT` memories by $+8.0$. Prompts mentioning *"morning"* or *"schedule"* boost `TASK` and `PREFERENCE` memories by $+5.0$.
