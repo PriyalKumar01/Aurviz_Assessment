@@ -1,0 +1,11 @@
+## Sample Environment Configuration (without secrets)
+# Copy this file to local.properties and customize the paths/keys for your environment.
+
+# Location of your Android SDK
+# Windows example:
+# sdk.dir=C\:\\Users\\username\\AppData\\Local\\Android\\Sdk
+# macOS/Linux example:
+# sdk.dir=/Users/username/Library/Android/sdk
+
+# Optional: Pre-configured Gemini API Key (or configure securely inside the app Settings UI)
+# gemini.api.key=YOUR_GEMINI_API_KEY_HERE
